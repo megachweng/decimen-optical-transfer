@@ -33,7 +33,7 @@ export const messages: Messages = {
     cardSendKicker: "Dieser Bildschirm sendet",
     cardSendTitle: "Datei oder Text senden",
     cardSendBody:
-      "Jede Datei bis %MAX_FILE_LABEL% oder ein eingefügter Textschnipsel bis %MAX_SNIPPET_LABEL%. Komprimiert, wenn es hilft, und mit dem Originalnamen wiederhergestellt.",
+      "Jede Datei bis %MAX_TRANSFER_LABEL% oder ein eingefügter Textschnipsel bis %MAX_SNIPPET_LABEL%. Komprimiert, wenn es hilft, und mit dem Originalnamen wiederhergestellt.",
     cardSendAction: "Senden",
     cardReceiveKicker: "Diese Kamera empfängt",
     cardReceiveTitle: "Draufhalten und empfangen",
@@ -63,7 +63,7 @@ export const messages: Messages = {
     titleSnippet: "Text senden",
     selectFile: "Datei auswählen",
     stopTransfer: "Übertragung stoppen",
-    anyFileUpTo: "Jede Datei · bis %MAX_FILE_LABEL%",
+    anyFileUpTo: "Jede Datei · bis %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `Ausgewählte Datei: ${name}`,
     demoPayload: "Demo-Daten",
     benchmarkPayload: "Benchmark-Daten",
@@ -243,6 +243,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "Dieser Teil ist ungültig. Sende ihn erneut.",
+    partMismatch: "Dieser Teil gehört zu einer anderen Übertragung. Sende den fehlenden Teil der ursprünglichen Datei oder lade die Seite neu.",
+    partConflict: "Dieser Teil widerspricht einem bereits empfangenen Teil. Lade beide Seiten neu und beginne erneut.",
+
     fileEmpty: "Wählen Sie eine Datei, die nicht leer ist.",
     fileOverLimit: (limit) => `Dateien sind in diesem Browser-Build auf ${limit} begrenzt.`,
     fileNameTooLong: "Der Dateiname oder der Medientyp ist zu lang.",
@@ -266,6 +270,17 @@ export const messages: Messages = {
     snippetBadUtf8: "Der wiederhergestellte Schnipsel ist kein gültiges UTF-8.",
   },
 
+  parts: {
+    restart: "Teile verwerfen und neu starten",
+    sending: (index, count) => `Teil ${index} von ${count}`,
+    previous: "Vorheriger Teil",
+    next: "Nächster Teil",
+    sendHint: "Warte auf die Bestätigung des Empfängers und wähle dann Nächster Teil. Die Framegröße bleibt bis zum Stopp fest.",
+    lastHint: "Letzter Teil: Sende weiter, bis der Empfänger die vollständige Datei anbietet.",
+    received: (index, count, next) => `${index} von ${count} Teilen empfangen. Wähle am Sender Teil ${next}.`,
+    verified: "Alle empfangenen Teile haben die SHA-256-Prüfung bestanden.",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `Dieser Bildschirm sendet ein älteres Decimen-Format (v${version}). Aktualisieren Sie das sendende Gerät.`,
@@ -278,6 +293,7 @@ export const messages: Messages = {
   units: {
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value} s`,

@@ -202,7 +202,7 @@ async function gunzipAsync(bytes: Uint8Array, maxBytes: number): Promise<Uint8Ar
  * `download` attribute is the only consumer and browsers sanitise it too, but
  * the receiver has no reason to take the sender's word for it.
  */
-function safeFileName(name: string): string {
+export function safeFileName(name: string): string {
   const base = name.split(/[\\/]/).pop() ?? "";
   // Strip control characters (NUL and newlines in particular) and the
   // relative-path names that survive a basename split.

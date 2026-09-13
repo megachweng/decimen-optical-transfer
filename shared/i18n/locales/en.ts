@@ -36,7 +36,7 @@ export const messages: Messages = {
     cardSendKicker: "This screen transmits",
     cardSendTitle: "Send a file or text",
     cardSendBody:
-      "Any file up to %MAX_FILE_LABEL%, or a pasted text snippet up to %MAX_SNIPPET_LABEL%. Compressed when it helps, restored with its original name.",
+      "Any file up to %MAX_TRANSFER_LABEL%, or a pasted text snippet up to %MAX_SNIPPET_LABEL%. Compressed when it helps, restored with its original name.",
     cardSendAction: "Send",
     cardReceiveKicker: "This camera receives",
     cardReceiveTitle: "Point and receive",
@@ -64,7 +64,7 @@ export const messages: Messages = {
     titleSnippet: "Send text",
     selectFile: "Select File",
     stopTransfer: "Stop transfer",
-    anyFileUpTo: "Any file · up to %MAX_FILE_LABEL%",
+    anyFileUpTo: "Any file · up to %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `Selected file: ${name}`,
     demoPayload: "Demo payload",
     benchmarkPayload: "Benchmark payload",
@@ -240,6 +240,17 @@ export const messages: Messages = {
   // thrown message and this catalog can never disagree.
   errors: ENGLISH_ERRORS,
 
+  parts: {
+    restart: "Discard parts and restart",
+    sending: (index, count) => `Part ${index} of ${count}`,
+    previous: "Previous part",
+    next: "Next part",
+    sendHint: "Wait for the receiver to confirm this part, then choose Next part. Frame size stays fixed until you stop.",
+    lastHint: "Last part: keep sending until the receiver offers the complete file.",
+    received: (index, count, next) => `Received ${index} of ${count} parts. On the sender, select part ${next}.`,
+    verified: "All received parts passed SHA-256 verification.",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `That screen is sending an older Decimen format (v${version}). Update the sending device.`,
@@ -252,6 +263,7 @@ export const messages: Messages = {
   units: {
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value} s`,

@@ -1616,3 +1616,10 @@ details.settings details.subsection .hint {
 [dir="rtl"] .action-arrow {
   transform: scaleX(-1);
 }
+
+/* A part cannot advance while it is being prepared or past the last part. */
+#part-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}

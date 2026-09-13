@@ -4,6 +4,8 @@ import { formatBytes } from "../shared/format.ts";
 import { MAX_FILE_BYTES, MAX_FILE_LABEL } from "../shared/protocol.ts";
 
 test("byte counts read the way a person would say them", () => {
+  assert.equal(formatBytes(1024 ** 3), "1.0 GB");
+  assert.equal(formatBytes(1024 ** 3 - 1), "1024.0 MB");
   assert.equal(formatBytes(0), "0 B");
   assert.equal(formatBytes(1023), "1023 B");
   assert.equal(formatBytes(1024), "1.0 KB");

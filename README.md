@@ -14,7 +14,7 @@ Open it on both devices and go — nothing to install. Works offline after the
 first visit, and installs as an app on both iOS and Android if you want it on
 a home screen.
 
-Files up to 64 MB (or a pasted text snippet), filename and media type
+Files up to 1 GB (1 GiB, or a pasted text snippet), filename and media type
 preserved, gzip only when it helps, SHA-256 verified before anything is
 offered — and received video plays right in the page. A stream can also be
 [exported as a looping animation](docs/user/sending.md#export-animation)
@@ -37,6 +37,11 @@ camera — [records with receipts](#measured-speed).
 Neither mode is encrypted: whatever is on the sending screen is readable by
 any camera pointed at it. The property this gives you is no network, not
 confidentiality — see [privacy](docs/user/privacy.md).
+
+Large files use separate, verified parts over the existing v3 protocol. After each
+part arrives, select **Next part** on the sender. The receiver combines all parts
+into one download. Both pages need the file-part update; ordinary small-file
+transfers remain compatible with earlier v3 builds.
 
 ## Measured speed
 

@@ -34,7 +34,7 @@ export const messages: Messages = {
     cardSendKicker: "Esta tela transmite",
     cardSendTitle: "Envie um arquivo ou texto",
     cardSendBody:
-      "Qualquer arquivo de até %MAX_FILE_LABEL%, ou um trecho de texto colado de até %MAX_SNIPPET_LABEL%. Comprimido quando ajuda, restaurado com o nome original.",
+      "Qualquer arquivo de até %MAX_TRANSFER_LABEL%, ou um trecho de texto colado de até %MAX_SNIPPET_LABEL%. Comprimido quando ajuda, restaurado com o nome original.",
     cardSendAction: "Enviar",
     cardReceiveKicker: "Esta câmera recebe",
     cardReceiveTitle: "Aponte e receba",
@@ -62,7 +62,7 @@ export const messages: Messages = {
     titleSnippet: "Enviar texto",
     selectFile: "Selecionar arquivo",
     stopTransfer: "Parar transferência",
-    anyFileUpTo: "Qualquer arquivo · até %MAX_FILE_LABEL%",
+    anyFileUpTo: "Qualquer arquivo · até %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `Arquivo selecionado: ${name}`,
     demoPayload: "Payload de demonstração",
     benchmarkPayload: "Payload de benchmark",
@@ -236,6 +236,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "Esta parte é inválida. Envie-a novamente.",
+    partMismatch: "Esta parte pertence a outra transferência. Envie a parte ausente do arquivo original ou recarregue para recomeçar.",
+    partConflict: "Esta parte difere de uma parte já recebida. Recarregue as duas páginas e recomece.",
+
     fileEmpty: "Escolha um arquivo que não esteja vazio.",
     fileOverLimit: (limit) => `Os arquivos são limitados a ${limit} nesta versão para navegador.`,
     fileNameTooLong: "O nome do arquivo ou o tipo de mídia é longo demais.",
@@ -257,6 +261,17 @@ export const messages: Messages = {
     snippetBadUtf8: "O trecho recuperado não é UTF-8 válido.",
   },
 
+  parts: {
+    restart: "Descartar partes e reiniciar",
+    sending: (index, count) => `Parte ${index} de ${count}`,
+    previous: "Parte anterior",
+    next: "Próxima parte",
+    sendHint: "Aguarde a confirmação do receptor e escolha Próxima parte. O tamanho dos quadros fica fixo até parar.",
+    lastHint: "Última parte: continue enviando até o receptor oferecer o arquivo completo.",
+    received: (index, count, next) => `Recebidas ${index} de ${count} partes. Selecione a parte ${next} no remetente.`,
+    verified: "Todas as partes recebidas passaram pela verificação SHA-256.",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `Aquela tela está enviando um formato Decimen mais antigo (v${version}). Atualize o dispositivo de envio.`,
@@ -269,6 +284,7 @@ export const messages: Messages = {
   units: {
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value} s`,

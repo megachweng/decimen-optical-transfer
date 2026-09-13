@@ -27,3 +27,16 @@ Camera settings apply live while the camera runs; a device that refuses a live r
 | capture fps | 60 | iOS delivers 30 unless the exact rate is demanded — the app handles this |
 | decode workers | device max | one WASM decoder per worker; busy workers drop frames, which the fountain absorbs |
 | show received files automatically | on | the only setting that persists between sessions, and the only one read when a transfer *lands* rather than when the camera starts |
+
+## Multipart files
+
+For a large file, the receiver keeps the camera running after each verified part.
+The message shows how many parts arrived and which part to select on the sender next.
+Repeated parts do not increase the count. Parts can arrive out of order.
+A part from another transfer does not replace the parts already received.
+
+After all parts pass SHA-256 verification, the receiver offers one download with the original file name.
+Multipart files do not open a media preview. Each part has its own checksum; there is no separate whole-file checksum in the multipart envelope.
+
+Keep the receiver page open until you save the file. Reloading discards received parts; this version does not resume across page reloads.
+Both pages must support file parts. An earlier v3 receiver treats each part as an ordinary file and cannot combine them automatically.

@@ -33,7 +33,7 @@ export const messages: Messages = {
     cardSendKicker: "هذه الشاشة تبثّ",
     cardSendTitle: "إرسال ملف أو نص",
     cardSendBody:
-      "أي ملف حتى %MAX_FILE_LABEL%، أو مقتطف نصي ملصق حتى %MAX_SNIPPET_LABEL%. يُضغط عندما يفيد ذلك، ويُستعاد باسمه الأصلي.",
+      "أي ملف حتى %MAX_TRANSFER_LABEL%، أو مقتطف نصي ملصق حتى %MAX_SNIPPET_LABEL%. يُضغط عندما يفيد ذلك، ويُستعاد باسمه الأصلي.",
     cardSendAction: "إرسال",
     cardReceiveKicker: "هذه الكاميرا تستقبل",
     cardReceiveTitle: "وجِّه واستقبِل",
@@ -61,7 +61,7 @@ export const messages: Messages = {
     titleSnippet: "إرسال نص",
     selectFile: "اختيار ملف",
     stopTransfer: "إيقاف النقل",
-    anyFileUpTo: "أي ملف · حتى %MAX_FILE_LABEL%",
+    anyFileUpTo: "أي ملف · حتى %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `الملف المحدد: ${name}`,
     demoPayload: "حمولة تجريبية",
     benchmarkPayload: "حمولة قياس الأداء",
@@ -235,6 +235,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "هذا الجزء غير صالح. أرسله مرة أخرى.",
+    partMismatch: "هذا الجزء ينتمي إلى عملية نقل أخرى. أرسل الجزء المفقود من الملف الأصلي أو أعد تحميل الصفحة.",
+    partConflict: "هذا الجزء يختلف عن جزء مستلم سابقًا. أعد تحميل الصفحتين وابدأ من جديد.",
+
     fileEmpty: "اختر ملفًا غير فارغ.",
     fileOverLimit: (limit) => `يقتصر حجم الملفات على ${limit} في إصدار المتصفح هذا.`,
     fileNameTooLong: "اسم الملف أو نوع الوسائط طويل جدًا.",
@@ -254,6 +258,17 @@ export const messages: Messages = {
     snippetBadUtf8: "المقتطف المستعاد ليس بترميز UTF-8 صالح.",
   },
 
+  parts: {
+    restart: "تجاهل الأجزاء والبدء من جديد",
+    sending: (index, count) => `الجزء ${index} من ${count}`,
+    previous: "الجزء السابق",
+    next: "الجزء التالي",
+    sendHint: "انتظر تأكيد الاستلام ثم اختر الجزء التالي. يبقى حجم الإطار ثابتًا حتى إيقاف النقل.",
+    lastHint: "هذا آخر جزء. واصل الإرسال حتى يعرض المستقبِل الملف الكامل للتنزيل.",
+    received: (index, count, next) => `تم استلام ${index} من ${count} أجزاء. اختر الجزء ${next} على جهاز الإرسال.`,
+    verified: "اجتازت جميع الأجزاء المستلمة التحقق باستخدام SHA-256.",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `تلك الشاشة ترسل بتنسيق Decimen أقدم (v${version}). حدِّث الجهاز المرسِل.`,
@@ -266,6 +281,7 @@ export const messages: Messages = {
   units: {
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value} ث`,

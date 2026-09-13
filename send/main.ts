@@ -40,11 +40,10 @@ import {
   smallestSufficientFrameSize,
   sourceBlockCount,
 } from "../shared/frame-capacity";
+import { planFileParts, packFilePart, type FilePartMetadata } from "../shared/file-parts";
 import { LTEncoder } from "../shared/fountain";
 import { MAX_SNIPPET_BYTES, packSnippet } from "../shared/snippet";
 import {
-  MAX_FILE_BYTES,
-  MAX_FILE_LABEL,
   fnv1a,
   packFile,
   packFrame,
@@ -100,8 +99,8 @@ const spec = (id: string) => document.getElementById(id)!;
 function showStreamPanels(visible: boolean): void {
   streamSpecs.hidden = !visible;
   footerHint.hidden = !visible;
-  exportPanel.hidden = !visible;
-  if (visible) void updateExportEstimate();
+  exportPanel.hidden = !visible || partTransfer !== null;
+  if (visible && !partTransfer) void updateExportEstimate();
 }
 
 const openShareDialog = wireShareDialog();
@@ -118,6 +117,36 @@ let selectedFile: {
   compression: "none" | "gzip";
   transmittedSize: number;
 } | null = null;
+let partTransfer: { file: File; meta: FilePartMetadata } | null = null;
+let preparingSelection = false;
+const partControls = document.getElementById("part-controls")!;
+const partLabel = document.getElementById("part-label")!;
+const partHint = document.getElementById("part-hint")!;
+const previousPart = document.getElementById("part-previous") as HTMLButtonElement;
+const nextPart = document.getElementById("part-next") as HTMLButtonElement;
+
+function updatePartControls(): void {
+  partControls.hidden = partTransfer === null;
+  cfgBytes.disabled = partTransfer !== null || preparingSelection;
+  for (const control of [cfgFps, cfgEcc, cfgGrid, cfgSize]) control.disabled = preparingSelection;
+  if (!partTransfer) return;
+  const { index, count } = partTransfer.meta;
+  partLabel.textContent = msg.parts.sending(fmtInt(index + 1), fmtInt(count));
+  partHint.textContent = index + 1 === count ? msg.parts.lastHint : msg.parts.sendHint;
+  previousPart.disabled = preparingSelection || index === 0;
+  nextPart.disabled = preparingSelection || index + 1 === count;
+}
+
+async function sendPart(index: number): Promise<void> {
+  if (!partTransfer || preparingSelection || index < 0 || index >= partTransfer.meta.count) return;
+  const transfer = partTransfer;
+  transfer.meta = { ...transfer.meta, index };
+  await startSelection(msg.send.preparingFile(transfer.file.name), async () => ({
+    name: transfer.file.name, size: transfer.file.size,
+    packed: await packFilePart(transfer.file, transfer.meta),
+  }));
+}
+
 let generation = 0; // bumped on every restart; stale loops see it and die
 let resizeDisplay: (() => void) | null = null;
 // The animation export in flight, if any. It snapshots payload and settings at
@@ -155,12 +184,12 @@ function currentMode(): "file" | "snippet" {
  *  keeps the idle wording: the status line already names what went wrong,
  *  and nothing is streaming. */
 function updateFilePicker(): void {
-  const armed = currentMode() === "file" && selectedFile !== null;
+  const armed = currentMode() === "file" && (selectedFile !== null || partTransfer !== null || preparingSelection);
   paneFile.classList.toggle("has-file", armed);
   filePickerButton.textContent = armed ? msg.send.stopTransfer : msg.send.selectFile;
   filePickerLabel.textContent =
-    armed && selectedFile
-      ? msg.send.selectedFile(selectedFile.name)
+    armed && (selectedFile || partTransfer)
+      ? msg.send.selectedFile(partTransfer?.file.name ?? selectedFile!.name)
       : fillRuntimeTokens(msg.send.anyFileUpTo);
 }
 
@@ -277,6 +306,9 @@ function stopTransfer(): void {
   generation++;
   if (activeExport) activeExport.cancelled = true;
   selectedFile = null;
+  partTransfer = null;
+  preparingSelection = false;
+  updatePartControls();
   setStageFullscreen(false);
   stage.hidden = true;
   showStreamPanels(false);
@@ -316,6 +348,9 @@ function applyMode(): void {
   generation++;
   if (activeExport) activeExport.cancelled = true;
   selectedFile = null;
+  partTransfer = null;
+  preparingSelection = false;
+  updatePartControls();
   setStageFullscreen(false);
   stage.hidden = true;
   showStreamPanels(false);
@@ -358,7 +393,11 @@ async function startSelection(
   // The payload a running export describes is being replaced — abandon it.
   if (activeExport) activeExport.cancelled = true;
   selectedFile = null;
+  preparingSelection = true;
+  updatePartControls();
+  updateFilePicker();
   stage.hidden = true;
+  showStreamPanels(false);
   setStatus(status);
   try {
     const { name, size, packed } = await prepare();
@@ -370,8 +409,15 @@ async function startSelection(
       compression: packed.compression,
       transmittedSize: packed.transmittedSize,
     };
+    preparingSelection = false;
+    updatePartControls();
+    updateFilePicker();
     await startStream(true);
   } catch (error) {
+    if (selectionGeneration !== generation) return;
+    preparingSelection = false;
+    updatePartControls();
+    updateFilePicker();
     showError(localizeError(error));
   }
 }
@@ -389,17 +435,13 @@ async function selectDemo(fileName: string): Promise<void> {
 async function selectFile(): Promise<void> {
   const file = cfgFile.files?.[0];
   if (!file) return;
+  partTransfer = null;
   await startSelection(msg.send.preparingFile(file.name), async () => {
-    // Checked here, off File.size, rather than after reading the bytes: a file
-    // well past the limit should be refused instantly instead of after the
-    // browser has spent time and memory materialising it. Name the actual size —
-    // "too large" without a number leaves you guessing by how much.
-    if (file.size === 0) {
-      throw new Error(msg.send.fileEmpty(file.name));
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      throw new Error(msg.send.fileOverLimit(file.name, formatBytesL(file.size), MAX_FILE_LABEL));
-    }
+    // Plan before reading. Only the selected part enters memory.
+    const meta = planFileParts(file, Number(cfgBytes.value));
+    partTransfer = meta ? { file, meta } : null;
+    updatePartControls();
+    if (meta) return { name: file.name, size: file.size, packed: await packFilePart(file, meta) };
     const bytes = new Uint8Array(await file.arrayBuffer());
     return { name: file.name, size: file.size, packed: await packFile(file.name, file.type, bytes) };
   });
@@ -457,6 +499,8 @@ async function main() {
   for (const el of [cfgExportFormat, cfgExportFps, cfgExportScale, cfgExportCycles]) {
     el.addEventListener("change", () => void updateExportEstimate());
   }
+  previousPart.addEventListener("click", () => void sendPart((partTransfer?.meta.index ?? 0) - 1));
+  nextPart.addEventListener("click", () => void sendPart((partTransfer?.meta.index ?? 0) + 1));
   exportButton.addEventListener("click", () => void runExport());
   await requestScreenWakeLock();
 }

@@ -117,7 +117,7 @@ test("only known tokens appear, and only where the build can fill them", () => {
   // The two MAX_* tokens are fillable at runtime (standalone files); anything
   // else is build-time only and must not leak outside home.* keys, because
   // the home page is never built standalone.
-  const runtimeFillable = new Set(["%MAX_FILE_LABEL%", "%MAX_SNIPPET_LABEL%"]);
+  const runtimeFillable = new Set(["%MAX_TRANSFER_LABEL%", "%MAX_SNIPPET_LABEL%"]);
   const known = new Set([...runtimeFillable, "%TOP_SPEED%"]);
   for (const [path, value] of stringLeaves(en)) {
     for (const token of tokensOf(value)) {
@@ -147,6 +147,8 @@ test("inline markup in Html-suffixed values survives translation", () => {
 test("interpolating functions actually use their arguments", () => {
   // [path, args, substrings that must appear in the result]
   const probes: [string, unknown[], string[]][] = [
+    ["parts.sending", ["7", "19"], ["7", "19"]],
+    ["parts.received", ["7", "19", "11"], ["7", "19", "11"]],
     ["send.selectedFile", ["report.pdf"], ["report.pdf"]],
     ["send.loadingDemo", ["success.png"], ["success.png"]],
     ["send.demoLoadFailed", ["success.png", 404], ["success.png", "404"]],

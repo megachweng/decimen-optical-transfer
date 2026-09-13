@@ -33,7 +33,7 @@ export const messages: Messages = {
     cardSendKicker: "这块屏幕负责发送",
     cardSendTitle: "发送文件或文本",
     cardSendBody:
-      "任意文件，最大 %MAX_FILE_LABEL%；或粘贴一段文本，最长 %MAX_SNIPPET_LABEL%。有益时自动压缩，恢复后保留原文件名。",
+      "任意文件，最大 %MAX_TRANSFER_LABEL%；或粘贴一段文本，最长 %MAX_SNIPPET_LABEL%。有益时自动压缩，恢复后保留原文件名。",
     cardSendAction: "发送",
     cardReceiveKicker: "这个摄像头负责接收",
     cardReceiveTitle: "对准即收",
@@ -61,7 +61,7 @@ export const messages: Messages = {
     titleSnippet: "发送文本",
     selectFile: "选择文件",
     stopTransfer: "停止传输",
-    anyFileUpTo: "任意文件 · 最大 %MAX_FILE_LABEL%",
+    anyFileUpTo: "任意文件 · 最大 %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `已选文件：${name}`,
     demoPayload: "演示数据",
     benchmarkPayload: "基准测试数据",
@@ -230,6 +230,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "当前分片无效，请重新发送这一片。",
+    partMismatch: "此分片属于另一次传输。请发送原文件缺失的分片，或刷新页面重新开始。",
+    partConflict: "此分片与已收到的分片内容冲突，请刷新两端页面重新开始。",
+
     fileEmpty: "请选择非空文件。",
     fileOverLimit: (limit) => `此浏览器构建版本的文件上限为 ${limit}。`,
     fileNameTooLong: "文件名或媒体类型过长。",
@@ -249,6 +253,17 @@ export const messages: Messages = {
     snippetBadUtf8: "恢复出的文本片段不是有效的 UTF-8。",
   },
 
+  parts: {
+    restart: "丢弃分片并重新开始",
+    sending: (index, count) => `第 ${index} / ${count} 片`,
+    previous: "上一片",
+    next: "下一片",
+    sendHint: "接收端确认当前分片已完成后，再点击“下一片”。停止传输后才能调整二维码帧大小。",
+    lastHint: "这是最后一片，请保持发送，直到接收端提供完整文件下载。",
+    received: (index, count, next) => `已收到 ${index} / ${count} 片。请在发送端选择第 ${next} 片。`,
+    verified: "已收到的分片均通过 SHA-256 校验。",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `对方屏幕正在以较旧的 Decimen 格式（v${version}）发送。请更新发送设备。`,
@@ -260,6 +275,7 @@ export const messages: Messages = {
   units: {
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value} 秒`,

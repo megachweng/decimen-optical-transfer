@@ -21,6 +21,9 @@ export interface OpticalErrorParams {
 /** The English reference wording. The en catalog uses this object verbatim;
  *  every other locale translates it (see shared/i18n/messages.ts `errors`). */
 export const ENGLISH_ERRORS: ErrorMessages = {
+  partInvalid: "This file part is invalid. Send the part again.",
+  partMismatch: "This part belongs to a different transfer. Send the original file's missing part, or reload to start over.",
+  partConflict: "This part conflicts with an already received part. Reload both pages and start again.",
   fileEmpty: "Choose a non-empty file.",
   fileOverLimit: (limit) => `Files are limited to ${limit} in this browser build.`,
   fileNameTooLong: "The file name or media type is too long.",

@@ -5,7 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { MAX_FILE_LABEL } from "./shared/protocol";
+import { MAX_TRANSFER_LABEL } from "./shared/file-parts";
 import { MAX_SNIPPET_LABEL } from "./shared/snippet";
 import {
   DEFAULT_FRAME_BYTES,
@@ -103,7 +103,7 @@ const topSustained = (
 // One token set for every mode — the standalone pages carry these tokens too.
 const TOKENS = {
   TOP_SPEED: topSustained ? `Up to ${Math.floor(topSustained.sustainedKBs)} KB/s` : "Hundreds of KB/s",
-  MAX_FILE_LABEL,
+  MAX_TRANSFER_LABEL,
   MAX_SNIPPET_LABEL,
   SITE_URL,
   OG_IMAGE: new URL("og.png", SITE_URL).href,

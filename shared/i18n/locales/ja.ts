@@ -34,7 +34,7 @@ export const messages: Messages = {
     cardSendKicker: "この画面から送信",
     cardSendTitle: "ファイルやテキストを送信",
     cardSendBody:
-      "%MAX_FILE_LABEL% までの任意のファイル、または %MAX_SNIPPET_LABEL% までの貼り付けたテキストを送れます。有効な場合は圧縮され、元のファイル名で復元されます。",
+      "%MAX_TRANSFER_LABEL% までの任意のファイル、または %MAX_SNIPPET_LABEL% までの貼り付けたテキストを送れます。有効な場合は圧縮され、元のファイル名で復元されます。",
     cardSendAction: "送信",
     cardReceiveKicker: "このカメラで受信",
     cardReceiveTitle: "カメラを向けて受信",
@@ -62,7 +62,7 @@ export const messages: Messages = {
     titleSnippet: "テキストを送信",
     selectFile: "ファイルを選択",
     stopTransfer: "転送を停止",
-    anyFileUpTo: "任意のファイル · 最大 %MAX_FILE_LABEL%",
+    anyFileUpTo: "任意のファイル · 最大 %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `選択したファイル: ${name}`,
     demoPayload: "デモ用データ",
     benchmarkPayload: "ベンチマーク用データ",
@@ -240,6 +240,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "この分割データは無効です。再送信してください。",
+    partMismatch: "別の転送の分割データです。元のファイルの不足分を送るか、ページを再読み込みしてください。",
+    partConflict: "受信済みの分割データと内容が異なります。両方のページを再読み込みしてやり直してください。",
+
     fileEmpty: "空でないファイルを選択してください。",
     fileOverLimit: (limit) => `このブラウザ版で送れるファイルは ${limit} までです。`,
     fileNameTooLong: "ファイル名またはメディアタイプが長すぎます。",
@@ -259,6 +263,17 @@ export const messages: Messages = {
     snippetBadUtf8: "復元したテキストは有効な UTF-8 ではありません。",
   },
 
+  parts: {
+    restart: "分割データを破棄してやり直す",
+    sending: (index, count) => `${count} 分割中 ${index} 番目`,
+    previous: "前の分割",
+    next: "次の分割",
+    sendHint: "受信側の完了確認後に「次の分割」を選んでください。停止するまでフレームサイズは変更できません。",
+    lastHint: "最後の分割です。受信側で完全なファイルを保存できるまで送信を続けてください。",
+    received: (index, count, next) => `${count} 分割中 ${index} 個を受信しました。送信側で ${next} 番目を選んでください。`,
+    verified: "受信したすべての分割データは SHA-256 検証済みです。",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `相手の画面は古い Decimen 形式 (v${version}) で送信しています。送信側のデバイスを更新してください。`,
@@ -271,6 +286,7 @@ export const messages: Messages = {
   units: {
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value} 秒`,

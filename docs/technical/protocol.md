@@ -38,3 +38,23 @@ Inside the fountain payload, a container preserves filename, media type, optiona
 Error correction stays at L: in-frame ECC and the fountain solve different problems (corruption vs erasure), and at these frame sizes "decode whole or discard" plus fountain redundancy is the better trade. The mask pattern is pinned (any declared mask is valid to a decoder), skipping the spec's 8-way mask evaluation for ~4× faster generation.
 
 Golden wire-format vectors live in `tests/` — the encoder and decoder are held to fixed bytes, not just to each other.
+
+## Application-level file parts
+
+The frame version remains v3, with its 22-byte header and u16 block count. The DCF2 file container also stays unchanged.
+Small files still use ordinary containers. Larger files travel as separate containers with media type `application/vnd.decimen.file-part`.
+
+The decoded bytes of each part contain a four-byte little-endian JSON length, UTF-8 JSON, then the raw part bytes.
+The JSON fields are `version` (1), `id` (transfer UUID), `name`, `type`, `size`, `partSize`, `index` (zero-based), and `count`.
+`count` must equal `ceil(size / partSize)`. All parts share the same metadata except `index`.
+The original file limit is 1 GiB. Each envelope fits the existing 64 MiB file limit and the selected frame capacity, including container metadata.
+
+The sender freezes part boundaries for a file selection and reads only the current slice.
+The user advances or returns to another part. Each part remains a normal repeating v3 fountain stream.
+The receiver verifies the container checksum and SHA-256 before it stores a part.
+It rejects inconsistent metadata and conflicting duplicates. Matching duplicates do not change progress.
+It assembles the parts in index order only when the complete set is present.
+
+Receivers store parts as Blobs and create the final Blob from those references.
+The application does not allocate a contiguous byte array for the whole file.
+Parts last for the current page session only. There is no automatic sender acknowledgment or persistent resume.

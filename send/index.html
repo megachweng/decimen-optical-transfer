@@ -39,9 +39,18 @@
            hidden (but still focusable) and the styled span stands in for it. -->
       <label class="file-picker" id="pane-file">
         <span class="file-picker-button" id="file-picker-button" data-i18n="send.selectFile">Select File</span>
-        <span class="file-picker-text" id="file-picker-label" data-i18n="send.anyFileUpTo">Any file · up to %MAX_FILE_LABEL%</span>
+        <span class="file-picker-text" id="file-picker-label" data-i18n="send.anyFileUpTo">Any file · up to %MAX_TRANSFER_LABEL%</span>
         <input id="cfg-file" type="file" />
       </label>
+
+      <div id="part-controls" hidden>
+        <p class="hint" id="part-label" role="status"></p>
+        <div class="note-actions">
+          <button class="secondary-button" type="button" id="part-previous" data-i18n="parts.previous">Previous part</button>
+          <button class="secondary-button" type="button" id="part-next" data-i18n="parts.next">Next part</button>
+        </div>
+        <p class="hint" id="part-hint"></p>
+      </div>
 
       <div class="demo-picker" id="pane-demo" hidden>
         <span data-i18n="send.demoPayload">Demo payload</span>

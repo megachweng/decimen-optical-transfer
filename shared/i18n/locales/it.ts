@@ -33,7 +33,7 @@ export const messages: Messages = {
     cardSendKicker: "Questo schermo trasmette",
     cardSendTitle: "Invia un file o un testo",
     cardSendBody:
-      "Qualsiasi file fino a %MAX_FILE_LABEL%, o un frammento di testo incollato fino a %MAX_SNIPPET_LABEL%. Compresso quando conviene, ripristinato con il nome originale.",
+      "Qualsiasi file fino a %MAX_TRANSFER_LABEL%, o un frammento di testo incollato fino a %MAX_SNIPPET_LABEL%. Compresso quando conviene, ripristinato con il nome originale.",
     cardSendAction: "Invia",
     cardReceiveKicker: "Questa fotocamera riceve",
     cardReceiveTitle: "Inquadra e ricevi",
@@ -63,7 +63,7 @@ export const messages: Messages = {
     titleSnippet: "Invia testo",
     selectFile: "Seleziona file",
     stopTransfer: "Interrompi trasferimento",
-    anyFileUpTo: "Qualsiasi file · fino a %MAX_FILE_LABEL%",
+    anyFileUpTo: "Qualsiasi file · fino a %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `File selezionato: ${name}`,
     demoPayload: "Payload demo",
     benchmarkPayload: "Payload benchmark",
@@ -245,6 +245,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "Questa parte non è valida. Inviala di nuovo.",
+    partMismatch: "Questa parte appartiene a un altro trasferimento. Invia la parte mancante del file originale o ricarica per ricominciare.",
+    partConflict: "Questa parte non corrisponde a una parte già ricevuta. Ricarica entrambe le pagine e ricomincia.",
+
     fileEmpty: "Scegli un file non vuoto.",
     fileOverLimit: (limit) =>
       `In questa build per browser i file sono limitati a ${limit}.`,
@@ -268,6 +272,17 @@ export const messages: Messages = {
     snippetBadUtf8: "Il frammento recuperato non è UTF-8 valido.",
   },
 
+  parts: {
+    restart: "Scarta le parti e ricomincia",
+    sending: (index, count) => `Parte ${index} di ${count}`,
+    previous: "Parte precedente",
+    next: "Parte successiva",
+    sendHint: "Attendi la conferma del ricevente, poi scegli Parte successiva. La dimensione dei fotogrammi resta fissa fino all’arresto.",
+    lastHint: "Ultima parte: continua a inviare finché il ricevente non offre il file completo.",
+    received: (index, count, next) => `Ricevute ${index} di ${count} parti. Seleziona la parte ${next} sul mittente.`,
+    verified: "Tutte le parti ricevute hanno superato la verifica SHA-256.",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `Quello schermo trasmette un formato Decimen più vecchio (v${version}). Aggiorna il dispositivo che invia.`,
@@ -280,6 +295,7 @@ export const messages: Messages = {
   units: {
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value} s`,

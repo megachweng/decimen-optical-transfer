@@ -33,7 +33,7 @@ export const messages: Messages = {
     cardSendKicker: "이 화면이 송신합니다",
     cardSendTitle: "파일 또는 텍스트 보내기",
     cardSendBody:
-      "최대 %MAX_FILE_LABEL%의 모든 파일, 또는 최대 %MAX_SNIPPET_LABEL%의 텍스트 스니펫. 도움이 될 때는 압축하며, 원래 파일 이름 그대로 복원됩니다.",
+      "최대 %MAX_TRANSFER_LABEL%의 모든 파일, 또는 최대 %MAX_SNIPPET_LABEL%의 텍스트 스니펫. 도움이 될 때는 압축하며, 원래 파일 이름 그대로 복원됩니다.",
     cardSendAction: "보내기",
     cardReceiveKicker: "이 카메라가 수신합니다",
     cardReceiveTitle: "카메라를 비춰 받기",
@@ -61,7 +61,7 @@ export const messages: Messages = {
     titleSnippet: "텍스트 보내기",
     selectFile: "파일 선택",
     stopTransfer: "전송 중지",
-    anyFileUpTo: "모든 파일 · 최대 %MAX_FILE_LABEL%",
+    anyFileUpTo: "모든 파일 · 최대 %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `선택한 파일: ${name}`,
     demoPayload: "데모 페이로드",
     benchmarkPayload: "벤치마크 페이로드",
@@ -237,6 +237,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "유효하지 않은 조각입니다. 다시 전송하세요.",
+    partMismatch: "다른 전송의 조각입니다. 원본 파일의 누락된 조각을 보내거나 새로고침하세요.",
+    partConflict: "이미 수신한 조각과 내용이 다릅니다. 양쪽 페이지를 새로고침하고 다시 시작하세요.",
+
     fileEmpty: "비어 있지 않은 파일을 선택하세요.",
     fileOverLimit: (limit) => `이 브라우저 빌드에서 파일은 ${limit}까지로 제한됩니다.`,
     fileNameTooLong: "파일 이름 또는 미디어 유형이 너무 깁니다.",
@@ -256,6 +260,17 @@ export const messages: Messages = {
     snippetBadUtf8: "복원된 스니펫이 유효한 UTF-8이 아닙니다.",
   },
 
+  parts: {
+    restart: "조각을 버리고 다시 시작",
+    sending: (index, count) => `${count}개 중 ${index}번째 조각`,
+    previous: "이전 조각",
+    next: "다음 조각",
+    sendHint: "수신 측에서 완료를 확인한 뒤 다음 조각을 선택하세요. 중지할 때까지 프레임 크기는 고정됩니다.",
+    lastHint: "마지막 조각입니다. 수신 측에서 전체 파일을 다운로드할 수 있을 때까지 전송하세요.",
+    received: (index, count, next) => `${count}개 중 ${index}개 수신 완료. 송신 측에서 ${next}번째 조각을 선택하세요.`,
+    verified: "수신한 모든 조각이 SHA-256 검증을 통과했습니다.",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `상대 화면이 이전 버전의 Decimen 형식(v${version})을 보내고 있습니다. 보내는 기기를 업데이트하세요.`,
@@ -268,6 +283,7 @@ export const messages: Messages = {
   units: {
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value}초`,

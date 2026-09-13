@@ -33,7 +33,7 @@ export const messages: Messages = {
     cardSendKicker: "यह स्क्रीन भेजती है",
     cardSendTitle: "फ़ाइल या टेक्स्ट भेजें",
     cardSendBody:
-      "%MAX_FILE_LABEL% तक की कोई भी फ़ाइल, या %MAX_SNIPPET_LABEL% तक का पेस्ट किया हुआ टेक्स्ट। जहाँ फ़ायदा हो वहाँ कंप्रेस, और मूल नाम के साथ वापस।",
+      "%MAX_TRANSFER_LABEL% तक की कोई भी फ़ाइल, या %MAX_SNIPPET_LABEL% तक का पेस्ट किया हुआ टेक्स्ट। जहाँ फ़ायदा हो वहाँ कंप्रेस, और मूल नाम के साथ वापस।",
     cardSendAction: "भेजें",
     cardReceiveKicker: "यह कैमरा प्राप्त करता है",
     cardReceiveTitle: "कैमरा दिखाएँ और प्राप्त करें",
@@ -61,7 +61,7 @@ export const messages: Messages = {
     titleSnippet: "टेक्स्ट भेजें",
     selectFile: "फ़ाइल चुनें",
     stopTransfer: "ट्रांसफ़र रोकें",
-    anyFileUpTo: "कोई भी फ़ाइल · %MAX_FILE_LABEL% तक",
+    anyFileUpTo: "कोई भी फ़ाइल · %MAX_TRANSFER_LABEL% तक",
     selectedFile: (name) => `चुनी गई फ़ाइल: ${name}`,
     demoPayload: "डेमो पेलोड",
     benchmarkPayload: "बेंचमार्क पेलोड",
@@ -236,6 +236,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "यह भाग अमान्य है। इसे फिर से भेजें।",
+    partMismatch: "यह भाग किसी अन्य ट्रांसफ़र का है। मूल फ़ाइल का छूटा भाग भेजें या पेज फिर से लोड करें।",
+    partConflict: "यह भाग पहले मिले भाग से अलग है। दोनों पेज फिर से लोड करके शुरू करें।",
+
     fileEmpty: "ऐसी फ़ाइल चुनें जो खाली न हो।",
     fileOverLimit: (limit) => `इस ब्राउज़र बिल्ड में फ़ाइलों की सीमा ${limit} है।`,
     fileNameTooLong: "फ़ाइल का नाम या मीडिया टाइप बहुत लंबा है।",
@@ -255,6 +259,17 @@ export const messages: Messages = {
     snippetBadUtf8: "प्राप्त स्निपेट मान्य UTF-8 नहीं है।",
   },
 
+  parts: {
+    restart: "भाग हटाकर फिर शुरू करें",
+    sending: (index, count) => `भाग ${index} / ${count}`,
+    previous: "पिछला भाग",
+    next: "अगला भाग",
+    sendHint: "प्राप्तकर्ता से इस भाग की पुष्टि होने पर अगला भाग चुनें। रोकने तक फ़्रेम का आकार तय रहता है।",
+    lastHint: "अंतिम भाग: प्राप्तकर्ता पर पूरी फ़ाइल उपलब्ध होने तक भेजते रहें।",
+    received: (index, count, next) => `${count} में से ${index} भाग मिले। भेजने वाले उपकरण पर भाग ${next} चुनें।`,
+    verified: "प्राप्त सभी भागों की SHA-256 जाँच सफल रही।",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `वह स्क्रीन पुराना Decimen फ़ॉर्मैट (v${version}) भेज रही है। भेजने वाले डिवाइस को अपडेट करें।`,
@@ -267,6 +282,7 @@ export const messages: Messages = {
   units: {
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value} सेकंड`,

@@ -23,7 +23,7 @@ import { DEFAULT_LOCALE, LOCALES, matchLocale, localeByCode, type LocaleInfo } f
 import type { Messages } from "./messages";
 import { OpticalError, errorText } from "../optical-error";
 import type { FrameVerdict } from "../protocol";
-import { MAX_FILE_LABEL } from "../protocol";
+import { MAX_TRANSFER_LABEL } from "../file-parts";
 import { MAX_SNIPPET_LABEL } from "../snippet";
 
 const LOCALE_KEY = "decimen:locale";
@@ -44,7 +44,7 @@ export let msg: Messages;
  *  (%TOP_SPEED%, %APP_VERSION%…) are deliberately absent: strings carrying
  *  them exist only on the hosted pages, which the build already translated. */
 const RUNTIME_TOKENS: Record<string, string> = {
-  MAX_FILE_LABEL,
+  MAX_TRANSFER_LABEL,
   MAX_SNIPPET_LABEL,
 };
 
@@ -326,7 +326,8 @@ export function fmtInt(value: number): string {
 export function formatBytesL(bytes: number): string {
   if (bytes < 1024) return `${fmtInt(bytes)} ${msg.units.bytes}`;
   if (bytes < 1024 * 1024) return `${fmtNumber(bytes / 1024, 1, 1)} ${msg.units.kilobytes}`;
-  return `${fmtNumber(bytes / 1024 / 1024, 1, 1)} ${msg.units.megabytes}`;
+  if (bytes < 1024 ** 3) return `${fmtNumber(bytes / 1024 / 1024, 1, 1)} ${msg.units.megabytes}`;
+  return `${fmtNumber(bytes / 1024 ** 3, 1, 1)} ${msg.units.gigabytes}`;
 }
 
 /** shared/progress.ts formatDuration, composed from the catalog's units. */

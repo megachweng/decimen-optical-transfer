@@ -2,7 +2,7 @@
 
 Open `/send/`. Two modes, switched at the top: **File** and **Text snippet**.
 
-- **File** — tap **Select File** (any file up to 64 MB). Streaming starts immediately; the button becomes **Stop transfer**. Files are gzip-compressed only when that actually shrinks the optical payload.
+- **File** — tap **Select File** (any file up to 1 GB). Streaming starts immediately; the button becomes **Stop transfer**. Files are gzip-compressed only when that actually shrinks the optical payload.
 - **Text snippet** — paste or type (up to 16 KB), tap **Start text stream**.
 
 While streaming, the status line shows *Streaming ⟨name⟩ — Share receiver link*; the link opens a dialog with a QR of the receiver page, the copyable URL, and the OS share sheet.
@@ -41,3 +41,23 @@ The export inherits the Transfer settings above (bytes/frame, error correction, 
 The line under the options forecasts frames, file size (measured from a real sample frame, not modeled) and loop length. Rendering happens on the page — the forecast becomes a progress percentage and the button becomes **Cancel** — then the file downloads as `⟨name⟩.decimen.png` or `.zip`.
 
 When embedding in video: keep the video's frame rate a whole multiple of the export's (dropped frames cost time, never correctness — but they do cost time), and don't let compression shrink the code — big in the frame, 4× scale or more.
+
+## Large files
+
+The maximum original file size is 1,073,741,824 bytes (1 GiB, shown as 1 GB).
+Files that exceed one v3 stream use parts. Each part fits the selected frame size and the existing 64 MiB file limit.
+Metadata takes some space, so a 1 GiB file needs 17 parts at the largest frame setting.
+Smaller frame settings can require more parts.
+
+1. Select the frame size before you select a large file.
+2. Keep the current part on screen until the receiver confirms it.
+3. Select **Next part** on the sender.
+4. If the receiver requests an earlier part, select **Previous part** until that part appears.
+5. Keep the last part on screen until the receiver offers the complete file.
+
+The frame size stays fixed during a multipart transfer. FPS, layout, and display size can change between part preparations.
+Animation export is available for ordinary single-file transfers only.
+
+The sender reads one part at a time. The receiver keeps verified parts as browser-managed Blobs and combines their references for download.
+This avoids a second byte array the size of the complete file. Storage and memory limits still depend on the browser.
+Reloading the receiver discards its parts. Stopping and reselecting a file creates a new transfer; reload the receiver before starting it.

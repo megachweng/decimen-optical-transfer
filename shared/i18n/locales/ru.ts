@@ -33,7 +33,7 @@ export const messages: Messages = {
     cardSendKicker: "Этот экран передаёт",
     cardSendTitle: "Отправить файл или текст",
     cardSendBody:
-      "Любой файл до %MAX_FILE_LABEL% или вставленный текстовый фрагмент до %MAX_SNIPPET_LABEL%. Сжимается, когда это помогает, и восстанавливается с исходным именем.",
+      "Любой файл до %MAX_TRANSFER_LABEL% или вставленный текстовый фрагмент до %MAX_SNIPPET_LABEL%. Сжимается, когда это помогает, и восстанавливается с исходным именем.",
     cardSendAction: "Отправить",
     cardReceiveKicker: "Эта камера принимает",
     cardReceiveTitle: "Наведите и получите",
@@ -62,7 +62,7 @@ export const messages: Messages = {
     titleSnippet: "Отправить текст",
     selectFile: "Выбрать файл",
     stopTransfer: "Остановить передачу",
-    anyFileUpTo: "Любой файл · до %MAX_FILE_LABEL%",
+    anyFileUpTo: "Любой файл · до %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `Выбран файл: ${name}`,
     demoPayload: "Демо-данные",
     benchmarkPayload: "Данные бенчмарка",
@@ -243,6 +243,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "Эта часть недействительна. Отправьте её снова.",
+    partMismatch: "Эта часть относится к другой передаче. Отправьте недостающую часть исходного файла или перезагрузите страницу.",
+    partConflict: "Эта часть отличается от уже полученной. Перезагрузите обе страницы и начните заново.",
+
     fileEmpty: "Выберите непустой файл.",
     fileOverLimit: (limit) => `В этой браузерной сборке файлы ограничены ${limit}.`,
     fileNameTooLong: "Имя файла или тип содержимого слишком длинные.",
@@ -262,6 +266,17 @@ export const messages: Messages = {
     snippetBadUtf8: "Восстановленный фрагмент не является корректным UTF-8.",
   },
 
+  parts: {
+    restart: "Удалить части и начать заново",
+    sending: (index, count) => `Часть ${index} из ${count}`,
+    previous: "Предыдущая часть",
+    next: "Следующая часть",
+    sendHint: "Дождитесь подтверждения приёмника и выберите следующую часть. Размер кадра фиксирован до остановки передачи.",
+    lastHint: "Последняя часть: продолжайте передачу, пока приёмник не предложит полный файл.",
+    received: (index, count, next) => `Получено ${index} из ${count} частей. Выберите на отправителе часть ${next}.`,
+    verified: "Все полученные части прошли проверку SHA-256.",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `Передающий экран использует более старый формат Decimen (v${version}). Обновите отправляющее устройство.`,
@@ -274,6 +289,7 @@ export const messages: Messages = {
   units: {
     bytes: "Б",
     kilobytes: "КБ",
+    gigabytes: "ГБ",
     megabytes: "МБ",
     kbPerSecond: (value) => `${value} КБ/с`,
     secondsValue: (value) => `${value} с`,

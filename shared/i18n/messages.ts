@@ -8,7 +8,7 @@
 //   - strings: static copy. Keys referenced from HTML via data-i18n="dot.path"
 //     are swapped into the built per-locale pages (build/i18n-pages.ts) and at
 //     runtime in the standalone files. A string may carry %TOKEN% placeholders
-//     (build-time constants like %MAX_FILE_LABEL%); translations must keep
+//     (build-time constants like %MAX_TRANSFER_LABEL%); translations must keep
 //     them verbatim.
 //   - functions: runtime messages with values interpolated where the sentence
 //     needs them. Word order differs across languages, which is why these are
@@ -55,7 +55,7 @@ export interface Messages {
     chooseSideAriaLabel: string;
     cardSendKicker: string; // "This screen transmits"
     cardSendTitle: string;
-    cardSendBody: string; // carries %MAX_FILE_LABEL%, %MAX_SNIPPET_LABEL%
+    cardSendBody: string; // carries %MAX_TRANSFER_LABEL%, %MAX_SNIPPET_LABEL%
     cardSendAction: string; // "Send"
     cardReceiveKicker: string;
     cardReceiveTitle: string;
@@ -82,7 +82,7 @@ export interface Messages {
     titleSnippet: string; // h1 in snippet mode
     selectFile: string; // picker button, idle
     stopTransfer: string; // picker button, streaming
-    anyFileUpTo: string; // "Any file · up to %MAX_FILE_LABEL%"
+    anyFileUpTo: string; // "Any file · up to %MAX_TRANSFER_LABEL%"
     selectedFile: (name: string) => string;
     demoPayload: string;
     benchmarkPayload: string;
@@ -268,6 +268,9 @@ export interface Messages {
    * any Decimen client showing one of these shows this catalog's wording.
    */
   errors: {
+    partInvalid: string;
+    partMismatch: string;
+    partConflict: string;
     fileEmpty: string;
     fileOverLimit: (limit: string) => string;
     fileNameTooLong: string;
@@ -291,6 +294,17 @@ export interface Messages {
    * Wire-version verdicts (protocol.ts classifyFrame). Same contract as
    * errors: every client words a version mismatch exactly this way.
    */
+  parts: {
+    restart: string;
+    sending: (index: string, count: string) => string;
+    previous: string;
+    next: string;
+    sendHint: string;
+    lastHint: string;
+    received: (index: string, count: string, next: string) => string;
+    verified: string;
+  };
+
   verdicts: {
     olderSender: (version: number) => string;
     newerSender: (version: number) => string;
@@ -301,6 +315,7 @@ export interface Messages {
   units: {
     bytes: string; // "B"
     kilobytes: string; // "KB"
+    gigabytes: string; // "GB"
     megabytes: string; // "MB"
     kbPerSecond: (value: string) => string; // "245.3 KB/s"
     secondsValue: (value: string) => string; // "12.3 s"

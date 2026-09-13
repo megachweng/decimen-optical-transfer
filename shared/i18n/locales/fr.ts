@@ -35,7 +35,7 @@ export const messages: Messages = {
     cardSendKicker: "Cet écran transmet",
     cardSendTitle: "Envoyer un fichier ou du texte",
     cardSendBody:
-      "N’importe quel fichier jusqu’à %MAX_FILE_LABEL%, ou un extrait de texte collé jusqu’à %MAX_SNIPPET_LABEL%. Compressé quand c’est utile, restauré avec son nom d’origine.",
+      "N’importe quel fichier jusqu’à %MAX_TRANSFER_LABEL%, ou un extrait de texte collé jusqu’à %MAX_SNIPPET_LABEL%. Compressé quand c’est utile, restauré avec son nom d’origine.",
     cardSendAction: "Envoyer",
     cardReceiveKicker: "Cette caméra reçoit",
     cardReceiveTitle: "Pointez et recevez",
@@ -66,7 +66,7 @@ export const messages: Messages = {
     titleSnippet: "Envoyer du texte",
     selectFile: "Choisir un fichier",
     stopTransfer: "Arrêter le transfert",
-    anyFileUpTo: "N’importe quel fichier · jusqu’à %MAX_FILE_LABEL%",
+    anyFileUpTo: "N’importe quel fichier · jusqu’à %MAX_TRANSFER_LABEL%",
     selectedFile: (name) => `Fichier sélectionné : ${name}`,
     demoPayload: "Contenu de démo",
     benchmarkPayload: "Contenu de benchmark",
@@ -251,6 +251,10 @@ export const messages: Messages = {
   },
 
   errors: {
+    partInvalid: "Cette partie est invalide. Envoyez-la de nouveau.",
+    partMismatch: "Cette partie appartient à un autre transfert. Envoyez la partie manquante du fichier initial ou rechargez pour recommencer.",
+    partConflict: "Cette partie diffère d’une partie déjà reçue. Rechargez les deux pages et recommencez.",
+
     fileEmpty: "Choisissez un fichier non vide.",
     fileOverLimit: (limit) =>
       `Les fichiers sont limités à ${limit} dans cette version pour navigateur.`,
@@ -276,6 +280,17 @@ export const messages: Messages = {
     snippetBadUtf8: "L’extrait récupéré n’est pas de l’UTF-8 valide.",
   },
 
+  parts: {
+    restart: "Supprimer les parties et recommencer",
+    sending: (index, count) => `Partie ${index} sur ${count}`,
+    previous: "Partie précédente",
+    next: "Partie suivante",
+    sendHint: "Attendez la confirmation du récepteur, puis choisissez Partie suivante. La taille des trames reste fixe jusqu’à l’arrêt.",
+    lastHint: "Dernière partie : continuez jusqu’à ce que le récepteur propose le fichier complet.",
+    received: (index, count, next) => `${index} parties reçues sur ${count}. Sélectionnez la partie ${next} sur l’émetteur.`,
+    verified: "Toutes les parties reçues ont passé la vérification SHA-256.",
+  },
+
   verdicts: {
     olderSender: (version) =>
       `Cet écran envoie un format Decimen plus ancien (v${version}). Mettez à jour ` +
@@ -294,6 +309,7 @@ export const messages: Messages = {
     // not be consistent everywhere sizes appear.
     bytes: "B",
     kilobytes: "KB",
+    gigabytes: "GB",
     megabytes: "MB",
     kbPerSecond: (value) => `${value} KB/s`,
     secondsValue: (value) => `${value} s`,

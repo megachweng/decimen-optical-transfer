@@ -11,6 +11,7 @@
 //   getCapabilities; iOS Safari exposes none of them. shared/platform.ts owns
 //   the probing, so everything here is capability-gated rather than UA-gated.
 
+import { FILE_PART_TYPE, ReceivedFileParts } from "../shared/file-parts";
 import { LTDecoder } from "../shared/fountain";
 import {
   estimateTransferProgress,
@@ -129,6 +130,9 @@ let reportSessionId = 0; // pairs this run with the sender's diagnostics post
 let startTs = 0;
 let captureGen = 0;
 let done = false;
+let processingFile = false;
+let receivedParts = new ReceivedFileParts();
+const completedPartStreams = new Set<string>();
 let settingsWired = false;
 let statsTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -899,7 +903,7 @@ function onDecoded(bytes: Uint8Array, box?: SymbolBox, info?: SymbolInfo) {
   if (info?.tracked) trackedDecodes++;
   if (box) noteRegion(box, performance.now(), true, info);
   const parsed = parseFrame(bytes);
-  if (done) return;
+  if (done || processingFile) return;
   if (!parsed) {
     // A Decimen frame we cannot use is a different problem from no frames at
     // all, and the no-signal advice ("hold steadier, more light") is actively
@@ -923,7 +927,9 @@ function onDecoded(bytes: Uint8Array, box?: SymbolBox, info?: SymbolInfo) {
   // streamIdentity() covers every header field that has to hold constant, not
   // just the session id — see the note on it in protocol.ts.
   const identity = streamIdentity(header);
+  if (completedPartStreams.has(identity)) return;
   if (!decoder || streamKey !== identity) {
+    bar.classList.remove("error");
     decoder = new LTDecoder(header.k, header.blockLen, header.sessionId, header.totalLen);
     streamKey = identity;
     reportSessionId = header.sessionId;
@@ -998,6 +1004,47 @@ function goodputKbs(elapsed: number): number {
 }
 
 async function finish(container: Uint8Array, hashOk: boolean, seconds: number) {
+  processingFile = true;
+  let file: OpticalFile;
+  let assembled: Blob | undefined;
+  try {
+    if (!hashOk) throw new OpticalError("streamChecksumMismatch");
+    file = await unpackFile(container);
+    if (!(await verifyFile(file))) throw new OpticalError("sha256Failed");
+    if (file.type === FILE_PART_TYPE) {
+      await receivedParts.add(file);
+      completedPartStreams.add(streamKey);
+      const meta = receivedParts.meta!;
+      if (!receivedParts.complete) {
+        const notice = document.createElement("p");
+        notice.className = "received-note";
+        notice.textContent = msg.parts.received(fmtInt(receivedParts.receivedCount), fmtInt(meta.count), fmtInt(receivedParts.nextMissing + 1));
+        result.replaceChildren(notice, restartButton(msg.parts.restart));
+        setStatus(notice.textContent);
+        bar.style.width = "100%";
+        progressEl.setAttribute("aria-valuenow", "100");
+        progressLabel.textContent = msg.parts.verified;
+        etaLabel.textContent = "";
+        decoder = null;
+        streamKey = "";
+        processingFile = false;
+        return;
+      }
+      assembled = receivedParts.assemble();
+      file = { ...file, name: meta.name, type: meta.type };
+      receivedParts = new ReceivedFileParts();
+    } else if (receivedParts.meta) {
+      throw new OpticalError("partMismatch");
+    }
+  } catch (error) {
+    // Keep verified parts and the camera alive so this part can be sent again.
+    decoder = null;
+    streamKey = "";
+    processingFile = false;
+    bar.classList.add("error");
+    showError(localizeError(error));
+    return;
+  }
   done = true;
   captureGen++;
   // npm run diagnostics: one JSON report per completed run, POSTed to the dev
@@ -1089,6 +1136,7 @@ async function finish(container: Uint8Array, hashOk: boolean, seconds: number) {
   clearInterval(statsTimer);
   statsTimer = undefined;
   pool.resize(0);
+  decoder = null;
   preview.style.display = "none";
   // The transfer is over and the pipeline is gone: settings for a camera that
   // no longer exists would just be a dead control panel.
@@ -1101,10 +1149,6 @@ async function finish(container: Uint8Array, hashOk: boolean, seconds: number) {
   progressEl.setAttribute("aria-valuenow", "100");
   etaLabel.textContent = msg.receive.etaTotal(formatDurationL(seconds));
   try {
-    if (!hashOk) throw new OpticalError("streamChecksumMismatch");
-    const file = await unpackFile(container);
-    if (!(await verifyFile(file))) throw new OpticalError("sha256Failed");
-
     // The container carries its own media type, so the receiver never has to be
     // told in advance whether a file or a text snippet is coming.
     const runStats = (sizeLabel: string): string =>
@@ -1114,10 +1158,10 @@ async function finish(container: Uint8Array, hashOk: boolean, seconds: number) {
           msg.units.secondsValue(fmtNumber(seconds, 1, 1)),
           msg.units.kbPerSecond(fmtNumber(container.length / 1024 / seconds, 1, 1)),
         ),
-        ...(file.compression === "gzip" ? [msg.receive.gzipDecompressed] : []),
-        msg.receive.shaVerified,
+        ...(!assembled && file.compression === "gzip" ? [msg.receive.gzipDecompressed] : []),
+        assembled ? msg.parts.verified : msg.receive.shaVerified,
       ].join(" · ");
-    if (isSnippet(file)) {
+    if (!assembled && isSnippet(file)) {
       progressLabel.textContent = msg.receive.recoveredText;
       setStatus("");
       showSnippet(snippetText(file), runStats(msg.receive.textLabel), cfgAutoShow.checked);
@@ -1125,17 +1169,19 @@ async function finish(container: Uint8Array, hashOk: boolean, seconds: number) {
     }
 
     progressLabel.textContent = msg.receive.recoveredFile;
-    const kb = Math.round(file.bytes.length / 1024);
+    const kb = Math.round((assembled?.size ?? file.bytes.length) / 1024);
     // The run's numbers belong under the heading, not up in the camera status
     // line — which is done for good and goes quiet.
     setStatus("");
     const summary = document.createElement("p");
     summary.className = "hint";
-    summary.textContent = runStats(`${fmtInt(kb)} ${msg.units.kilobytes}`);
+    summary.textContent = assembled
+      ? `${file.name} · ${fmtInt(kb)} ${msg.units.kilobytes} · ${msg.parts.verified}`
+      : runStats(`${fmtInt(kb)} ${msg.units.kilobytes}`);
     const heading = document.createElement("div");
     heading.className = "done";
     heading.textContent = msg.receive.transferComplete;
-    const url = URL.createObjectURL(new Blob([file.bytes as BlobPart], { type: file.type }));
+    const url = URL.createObjectURL(assembled ?? new Blob([file.bytes as BlobPart], { type: file.type }));
     const download = document.createElement("a");
     download.className = "download";
     download.href = url;
@@ -1151,7 +1197,7 @@ async function finish(container: Uint8Array, hashOk: boolean, seconds: number) {
     const endActions = document.createElement("div");
     endActions.className = "note-actions pair";
     endActions.append(restartButton(msg.receive.receiveAnother));
-    if (isPreviewable(file.type)) {
+    if (!assembled && isPreviewable(file.type)) {
       // Saving is unaffected either way — `download` above hangs off the blob
       // URL, which needs nothing on disk. Only the preview is in question.
       result.append(
