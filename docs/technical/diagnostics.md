@@ -60,7 +60,9 @@ sent from `finish()` while camera settings and pool size are still real):
 - **Pipeline**: captures, drops from a busy pool, crops vs full scans,
   decodes, `trackedAttempts`/`trackedDecodes` (hits/attempts is the
   decimen-codec fast path's real hit rate — zero attempts means the
-  quad/dim plumbing broke, not the decoder), `zeroRegionMs`/`degradedMs`
+  quad/dim plumbing broke, not the decoder), `cleanUp` (picture clean-up:
+  `enhancedDecodes` per level, `cropAttempts` per level, `fullScanPasses`,
+  `blindCleanUps`; `"off"` under `?cleanup=off`), `zeroRegionMs`/`degradedMs`
   (time spent with tracking collapsed / below the expected code count).
 - **Environment**: worker count, requested vs actual camera settings,
   probed camera capabilities, device cores and UA.
@@ -79,6 +81,9 @@ sent from `finish()` while camera settings and pool size are still real):
    `framesRedundant` and `usefulOverhead`.
 4. `trackedDecodes/trackedAttempts` low? The fast path is missing — camera
    drift or quad quality; the crop pipeline is falling back to full decodes.
+5. Most decodes in `cleanUp.enhancedDecodes[2]`? The picture is at the edge
+   of what the receiver can read — codes too small or out of focus. Fewer
+   codes on screen, a closer camera, or smaller frames buy margin back.
 
 ## Benchmark records
 

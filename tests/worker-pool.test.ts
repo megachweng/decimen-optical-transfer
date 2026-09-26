@@ -240,3 +240,31 @@ test("an empty pool accepts nothing", () => {
   assert.equal(pool.submit(frame(1), []), false);
   assert.equal(pool.busyCount, 0);
 });
+
+test("the clean-up level and the job's report ride along too", () => {
+  const infos: unknown[] = [];
+  const reports: unknown[] = [];
+  const created: FakeWorker[] = [];
+  const pool = new DecodeWorkerPool(
+    () => {
+      const worker = new FakeWorker(0);
+      created.push(worker);
+      return worker;
+    },
+    (_bytes, _box, info) => infos.push(info?.level),
+    undefined,
+    undefined,
+    (report) => reports.push(report),
+  );
+  pool.resize(1);
+  pool.submit(frame(1), []);
+  created[0]!.onmessage?.({
+    data: { id: 0, symbols: [{ bytes: new Uint8Array([1]), level: 2 }], sightings: [], levelsTried: [1, 2] },
+  } as MessageEvent);
+  pool.submit(frame(2), []);
+  created[0]!.onmessage?.({
+    data: { id: 1, symbols: [], sightings: [], passes: 2, blindCleanUp: true },
+  } as MessageEvent);
+  assert.deepEqual(infos, [2]);
+  assert.deepEqual(reports, [{ levelsTried: [1, 2] }, { passes: 2, blindCleanUp: true }]);
+});

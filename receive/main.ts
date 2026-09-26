@@ -32,6 +32,7 @@ import { NoSignalHintTimer } from "../shared/no-signal";
 import {
   DecodeWorkerPool,
   type SymbolBox,
+  type DecodeReport,
   type SymbolInfo,
   type SymbolQuad,
 } from "../shared/worker-pool";
@@ -146,6 +147,7 @@ const pool = new DecodeWorkerPool(
   // the crop path go decode what the full frame could not.
   (box) => noteRegion(box, performance.now(), false),
   () => trackedAttempts++,
+  (report) => noteReport(report),
 );
 const captureTimes: number[] = [];
 const decodeTimes: number[] = [];
@@ -162,6 +164,13 @@ let cropsSubmitted = 0;
 let trackedDecodes = 0; // decodes via the fork's detection-skipping fast path
 let trackedAttempts = 0; // crops that TRIED the fast path — hits/attempts is
 // the fork's real hit rate; zero attempts means the quad/dim plumbing broke
+// Picture clean-up (../shared/enhance.ts): decodes that needed level 1 or 2,
+// crop attempts at each level, full scans that ran each pass, and scans that
+// cleaned up with nothing in view.
+const enhancedDecodes = [0, 0, 0];
+const cropAttempts = [0, 0, 0];
+const fullScanPasses = [0, 0, 0];
+let blindCleanUps = 0;
 let cameraStartedTs = 0; // acquisition latency = first decode − camera start
 let zeroRegionMs = 0; // transfer time spent with tracking fully collapsed
 let degradedMs = 0; // transfer time spent below the expected code count
@@ -193,6 +202,12 @@ interface Region extends SymbolBox {
    *  detection entirely. Only ever set from real decodes. */
   quad?: SymbolQuad;
   dim?: number;
+  /** Clean-up level this code last decoded at (../shared/enhance.ts). */
+  level: number;
+  /** Decodes in a row at `level`; a long run earns a probe one level down. */
+  levelStreak: number;
+  /** When bytes last decoded here. */
+  decodedAt: number;
 }
 const regions: Region[] = [];
 // Tried and reverted: a longer TTL for regions with a decode track record
@@ -221,6 +236,25 @@ const ACQUISITION_SCAN_MS = 100;
 const EXPECTED_REGIONS_DECAY_MS = 10_000;
 const REGION_PAD = 0.35;
 const MAX_REGIONS = 9;
+// Picture clean-up for poor captures — a 4- or 6-code grid leaves each code
+// 2–3 px per module, where a little defocus defeats the stock decoder. A
+// region's crops start at the level it last decoded at; after this many
+// decodes in a row there they probe the level below, which is cheaper.
+// Nothing else lowers a level: sharpening a crisp capture does not hurt it,
+// only costs time.
+const CLEAN_UP_PROBE_STREAK = 24;
+// How long a region goes without a decode before its crops also try one
+// level up on a miss. Misses between decodes are usually the sender mid-flip,
+// which no clean-up reads; climbing on them would only burn the workers.
+// Time, not a miss count, because a result lands a frame or two after the
+// next crop was already planned.
+const CLEAN_UP_ESCALATE_MS = 150;
+// With nothing decoding and nothing detected, a full scan's clean-up passes
+// are wasted — and acquisition scans run at 10 Hz. Ration them.
+const BLIND_CLEAN_UP_MS = 500;
+// ?cleanup=off decodes exactly as before clean-up existed, for A/B runs.
+const CLEAN_UP = new URLSearchParams(window.location.search).get("cleanup") !== "off";
+let lastBlindCleanUp = -Infinity;
 let lastFullScan = 0;
 let cropRotate = 0;
 let expectedRegions = 0;
@@ -251,23 +285,40 @@ function noteRegion(box: SymbolBox, now: number, decoded = true, info?: SymbolIn
       r.drift = 0.5 * (r.drift ?? 0) + 0.5 * Math.hypot(dx, dy);
       Object.assign(r, box, { seen: now });
       r.decoded = true;
+      r.decodedAt = now;
       if (info?.quad) r.quad = info.quad;
       if (info?.modules) r.dim = info.modules;
+      if (info?.level !== undefined) {
+        r.levelStreak = info.level === r.level ? r.levelStreak + 1 : 0;
+        r.level = info.level;
+      }
       return;
     }
   }
+  let level = info?.level ?? 0;
   if (!decoded) {
     // A sighting may only FOUND a region when it looks like the codes this
     // stream already decodes: grid codes are same-version and same-size on
     // screen, so a quad far off a decode-proven code's size is detector
     // noise. With nothing decoded yet there is no yardstick — full scans own
-    // acquisition then, and phantom regions would only starve them.
+    // acquisition then, and phantom regions would only starve them. It
+    // starts at their clean-up level: same codes, same picture.
     const reference = regions.find((r) => r.decoded);
     if (!reference) return;
     const ratio = Math.max(box.w, box.h) / Math.max(reference.w, reference.h);
     if (ratio < 0.5 || ratio > 2) return;
+    level = reference.level;
   }
-  regions.push({ ...box, seen: now, decoded, quad: info?.quad, dim: info?.modules });
+  regions.push({
+    ...box,
+    seen: now,
+    decoded,
+    quad: info?.quad,
+    dim: info?.modules,
+    level,
+    levelStreak: 0,
+    decodedAt: decoded ? now : -Infinity,
+  });
   if (regions.length > MAX_REGIONS) {
     regions.sort((a, b) => Number(b.decoded) - Number(a.decoded) || b.seen - a.seen);
     regions.length = MAX_REGIONS;
@@ -731,12 +782,65 @@ const BITMAP_CAPTURE =
   typeof createImageBitmap === "function" &&
   typeof OffscreenCanvas !== "undefined";
 
+interface FullScanJob {
+  ox: 0;
+  oy: 0;
+  full: true;
+  expected: number;
+  allowBlindCleanUp: boolean;
+  cleanUp: boolean;
+}
+
+interface CropJob {
+  ox: number;
+  oy: number;
+  full: false;
+  quad?: SymbolQuad;
+  dim?: number;
+  level: number;
+  escalate: boolean;
+  cleanUp: boolean;
+}
+
+/** A full scan's clean-up instructions (receive/decode.ts). The blind
+ *  ration is claimed on submit: if this scan turns out not to need it, the
+ *  next blind clean-up waits at most BLIND_CLEAN_UP_MS longer. */
+function fullScanJob(now: number): FullScanJob {
+  const allowBlindCleanUp = CLEAN_UP && expectedRegions === 0 && now - lastBlindCleanUp >= BLIND_CLEAN_UP_MS;
+  if (allowBlindCleanUp) lastBlindCleanUp = now;
+  return { ox: 0, oy: 0, full: true, expected: expectedRegions, allowBlindCleanUp, cleanUp: CLEAN_UP };
+}
+
+/** A crop of region `r` at (x, y): its clean-up level, a probe one level
+ *  down after a long run there, and one level up once it has gone quiet. */
+function cropJob(r: Region, x: number, y: number, now: number): CropJob {
+  const probe = r.level > 0 && r.levelStreak >= CLEAN_UP_PROBE_STREAK;
+  if (probe) r.levelStreak = 0;
+  return {
+    ox: x,
+    oy: y,
+    full: false,
+    quad: r.quad,
+    dim: r.dim,
+    level: probe ? r.level - 1 : r.level,
+    escalate: probe || now - r.decodedAt > CLEAN_UP_ESCALATE_MS,
+    cleanUp: CLEAN_UP,
+  };
+}
+
+/** Tally one decode job's clean-up for the diagnostics report. */
+function noteReport(report: DecodeReport): void {
+  for (const level of report.levelsTried ?? []) cropAttempts[level] = (cropAttempts[level] ?? 0) + 1;
+  for (let p = 0; p < (report.passes ?? 0); p++) fullScanPasses[p] = (fullScanPasses[p] ?? 0) + 1;
+  if (report.blindCleanUp) blindCleanUps++;
+}
+
 /** Fire-and-forget submit of a GPU-cropped frame. The bitmap resolves async;
  *  by then the pool may have filled or the transfer ended — close it rather
  *  than leak GPU memory. */
 function submitBitmap(
   pending: Promise<ImageBitmap>,
-  meta: { ox: number; oy: number; full: boolean; quad?: SymbolQuad; dim?: number },
+  meta: CropJob | FullScanJob,
 ): void {
   void pending
     .then((bitmap) => {
@@ -799,7 +903,7 @@ function captureFrame() {
     if (fullScanDue) {
       lastFullScan = now;
       fullScans++;
-      submitBitmap(createImageBitmap(video), { ox: 0, oy: 0, full: true });
+      submitBitmap(createImageBitmap(video), fullScanJob(now));
       return;
     }
     // The bitmaps resolve async, so "stop when the pool refuses" becomes
@@ -816,13 +920,7 @@ function captureFrame() {
       const h = Math.min(vh - y, Math.ceil(r.h + 2 * pad));
       if (w < 32 || h < 32) continue;
       free--;
-      submitBitmap(createImageBitmap(video, x, y, w, h), {
-        ox: x,
-        oy: y,
-        full: false,
-        quad: r.quad,
-        dim: r.dim,
-      });
+      submitBitmap(createImageBitmap(video, x, y, w, h), cropJob(r, x, y, now));
     }
     cropRotate++;
     return;
@@ -839,10 +937,7 @@ function captureFrame() {
     lastFullScan = now;
     fullScans++;
     const img = ctx.getImageData(0, 0, vw, vh);
-    pool.submit(
-      { id: frameId++, buf: img.data.buffer, w: vw, h: vh, ox: 0, oy: 0, full: true },
-      [img.data.buffer],
-    );
+    pool.submit({ id: frameId++, buf: img.data.buffer, w: vw, h: vh, ...fullScanJob(now) }, [img.data.buffer]);
     return;
   }
   // One crop per known code, rotated so a short worker pool doesn't starve
@@ -865,10 +960,7 @@ function captureFrame() {
     // The quad + dimension arm the worker's tracked fast path (detection
     // skipped entirely, 2× at V40); absent — or stale after a miss — the
     // worker falls back to the stock decoder on the same buffer.
-    const taken = pool.submit(
-      { id: frameId++, buf: img.data.buffer, w, h, ox: x, oy: y, full: false, quad: r.quad, dim: r.dim },
-      [img.data.buffer],
-    );
+    const taken = pool.submit({ id: frameId++, buf: img.data.buffer, w, h, ...cropJob(r, x, y, now) }, [img.data.buffer]);
     if (!taken) break;
     cropsSubmitted++;
   }
@@ -901,6 +993,7 @@ function onDecoded(bytes: Uint8Array, box?: SymbolBox, info?: SymbolInfo) {
   decodeTimes.push(performance.now());
   totalDecodes++;
   if (info?.tracked) trackedDecodes++;
+  if (info?.level) enhancedDecodes[info.level] = (enhancedDecodes[info.level] ?? 0) + 1;
   if (box) noteRegion(box, performance.now(), true, info);
   const parsed = parseFrame(bytes);
   if (done || processingFile) return;
@@ -1104,6 +1197,9 @@ async function finish(container: Uint8Array, hashOk: boolean, seconds: number) {
           decodes: totalDecodes,
           trackedAttempts,
           trackedDecodes,
+          cleanUp: CLEAN_UP
+            ? { enhancedDecodes, cropAttempts, fullScanPasses, blindCleanUps }
+            : "off",
           zeroRegionMs,
           degradedMs,
         },

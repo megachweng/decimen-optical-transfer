@@ -39,13 +39,26 @@ export interface SymbolInfo {
   modules?: number;
   /** True when the tracked fast path produced this decode. */
   tracked?: boolean;
+  /** Clean-up level that read it (../shared/enhance.ts); undefined for the
+   *  raw full-scan pass. */
+  level?: number;
+}
+
+/** What one decode job cost, for the diagnostics report. */
+export interface DecodeReport {
+  /** Crop: the clean-up levels it tried, in order. */
+  levelsTried?: number[];
+  /** Full scan: how many clean-up passes ran (1–3). */
+  passes?: number;
+  /** Full scan: clean-up ran although the raw pass found and saw nothing. */
+  blindCleanUp?: boolean;
 }
 
 interface DecodeMessage {
   id: number;
   /** Every QR found in the frame. The grid sender shows several codes at
    *  once; each one is an independent fountain frame. Empty means a miss. */
-  symbols: { bytes: Uint8Array; box?: SymbolBox; quad?: SymbolQuad; modules?: number; tracked?: boolean }[];
+  symbols: { bytes: Uint8Array; box?: SymbolBox; quad?: SymbolQuad; modules?: number; tracked?: boolean; level?: number }[];
   /** Codes DETECTED but not decoded — no bytes, but the position is real.
    *  The receiver uses these to aim crops at codes the full frame lost. */
   sightings?: SymbolBox[];
@@ -63,6 +76,7 @@ export class DecodeWorkerPool {
     private readonly onDecoded: (bytes: Uint8Array, box?: SymbolBox, info?: SymbolInfo) => void,
     private readonly onSighted?: (box: SymbolBox) => void,
     private readonly onTrackedAttempt?: () => void,
+    private readonly onReport?: (report: DecodeReport) => void,
   ) {}
 
   get size(): number {
@@ -84,13 +98,19 @@ export class DecodeWorkerPool {
       const slot = this.workers.length;
       const worker = this.create();
       worker.onmessage = (event: MessageEvent) => {
-        const { id, symbols, sightings, trackedAttempted } = event.data as DecodeMessage;
+        const { id, symbols, sightings, trackedAttempted, ...report } = event.data as DecodeMessage & DecodeReport;
         if (id === -1) return; // warm-up ping, no frame attached
         this.busy[slot] = false;
         if (trackedAttempted) this.onTrackedAttempt?.();
         for (const s of symbols)
-          this.onDecoded(s.bytes, s.box, { quad: s.quad, modules: s.modules, tracked: s.tracked });
+          this.onDecoded(s.bytes, s.box, {
+            quad: s.quad,
+            modules: s.modules,
+            tracked: s.tracked,
+            ...(s.level !== undefined ? { level: s.level } : {}),
+          });
         if (this.onSighted) for (const box of sightings ?? []) this.onSighted(box);
+        this.onReport?.(report);
       };
       this.workers.push(worker);
       this.busy.push(false);

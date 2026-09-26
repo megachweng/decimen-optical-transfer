@@ -8,7 +8,21 @@ Three pages, one shared core, a handful of single-purpose build plugins. No fram
 |---|---|---|
 | `/` | home: cards, share dialog | `home/main.ts` |
 | `send/` | file/snippet → fountain-coded QR stream on a canvas | `send/main.ts` |
-| `receive/` | camera → WASM QR decode in workers → fountain decoder → file | `receive/main.ts`, `receive/worker.ts` |
+| `receive/` | camera → WASM QR decode in workers → fountain decoder → file | `receive/main.ts`, `receive/worker.ts`, `receive/decode.ts` |
+
+The receive page's decode job — full-frame scan or single-code crop, the
+stock and tracked decoder paths, and picture clean-up — is `receive/decode.ts`,
+DOM-free so `tests/clean-up.test.ts` drives it with the real wasm; the worker
+is only its message shell. Clean-up (`shared/enhance.ts`) rescues poor
+captures, where a 4- or 6-code grid leaves each code 2–3 px per module and a
+little defocus defeats the stock decoder: level 1 is an unsharp mask, level 2
+adds a 1.5× Lanczos resample. A crop starts at the level its code last
+decoded at, climbs one level on a miss once the code has gone 150 ms without
+a decode, and probes one level down after 24 decodes in a row. A full scan
+reads the capture as is, then at level 1, then at level 2 while codes are
+missing; with nothing in view, its clean-up passes run at most every 500 ms.
+`?cleanup=off` turns all of it off for A/B runs; the diagnostics report counts
+it under `pipeline.cleanUp`.
 
 The send page carries two non-entry modules: `send/qr-frame.ts`, the one QR
 generation path (pinned mask, version locking) shared by the live stream and
@@ -31,6 +45,7 @@ one).
 - `display.ts` — QR display-size fitting against the viewport.
 - `platform.ts` — `isIOS`/`isAndroid` sniffs and camera capability probing (torch, continuous focus, max fps). Policy: probe wherever probeable; sniff only for unprobeable behavior.
 - `worker-pool.ts` — decode worker pool; busy workers drop frames, the fountain absorbs it.
+- `enhance.ts` — picture clean-up for poor captures ahead of the decoder: unsharp mask and 1.5× Lanczos-3 resample, scratch buffers reused per worker.
 - `no-signal.ts` — pure timing policy for the "Nothing happening?" hint (short first delay, longer after dismissal).
 - `progress.ts` — frames-collected progress estimation and fountain-overhead model.
 - `send-settings.ts` — canonical tx settings lists; the sender's dropdowns and the no-signal advice both render from it.
